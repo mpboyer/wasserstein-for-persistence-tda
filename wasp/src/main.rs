@@ -1,3 +1,7 @@
+mod structs;
+
+use crate::structs::*;
+
 fn main() {
-    println!("Hello, world!");
+    println!("Hello World!");
 }
