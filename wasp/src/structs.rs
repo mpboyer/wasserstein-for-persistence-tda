@@ -76,24 +76,6 @@ pub fn wasserstein_cost(p1: &PersistencePair, p2: &PersistencePair) -> f64 {
     }
 }
 
-/// Computes squared Wasserstein distance given a matching (Section 2.2, Equation 1)
-pub fn compute_wasserstein_distance_squared(
-    diagram1: &PersistenceDiagram,
-    diagram2: &PersistenceDiagram,
-    matching: &Matching,
-) -> f64 {
-    let mut dist_sq = 0.0;
-    for (i, pair1) in diagram1.pairs().iter().enumerate() {
-        if let Some(&j) = matching.get(&i) {
-            // Will always be Some(&j) if optimal transport exists
-            // (and it does !)
-            let pair2 = &diagram2.pairs()[j];
-            dist_sq += wasserstein_cost(pair1, pair2);
-        }
-    }
-    dist_sq
-}
-
 /// Helper function to augment diagrams to have the same cardinal
 pub fn augment_diagrams(
     diagram1: &PersistenceDiagram,
@@ -165,8 +147,40 @@ pub fn augment_diagram_set(diagrams: &[PersistenceDiagram]) -> Vec<PersistenceDi
     augmented
 }
 
-/// Matching algorithms for computing optimal transport
-pub type Matching = HashMap<usize, usize>;
+/// Represents an optimal matching between two persistence diagrams
+#[derive(Debug, Clone)]
+pub struct Matching {
+    /// Maps indices from first diagram to second diagram
+    assignments: HashMap<usize, usize>,
+    /// Total cost of the matching (sum of squared distances)
+    cost: f64,
+}
+
+impl Matching {
+    /// Creates a new matching with assignments and cost
+    pub fn new(assignments: HashMap<usize, usize>, cost: f64) -> Self {
+        Matching { assignments, cost }
+    }
+
+    /// Returns the assignment for a given index
+    pub fn get(&self, index: &usize) -> Option<&usize> {
+        self.assignments.get(index)
+    }
+
+    /// Returns the total cost of the matching
+    pub fn cost(&self) -> f64 {
+        self.cost
+    }
+
+    /// Returns a reference to the assignments map
+    pub fn assignments(&self) -> &HashMap<usize, usize> {
+        &self.assignments
+    }
+
+    pub fn len(&self) -> usize {
+        self.assignments.len()
+    }
+}
 
 /// Compute optimal matching/transport map for assignment between two persistence diagrams
 pub fn compute_optimal_matching(
@@ -181,7 +195,7 @@ pub fn compute_optimal_matching(
     );
 
     if n == 0 {
-        return HashMap::new();
+        return Matching::new(HashMap::new(), 0.);
     }
 
     // Scale floats to integers for `pathfinding` crate
@@ -197,14 +211,15 @@ pub fn compute_optimal_matching(
 
     let cost_matrix = Matrix::from_vec(n, n, costs).unwrap();
 
-    let (_total_cost, assignments) = kuhn_munkres_min(&cost_matrix);
+    let (total_cost, assignments) = kuhn_munkres_min(&cost_matrix);
 
     let mut matching = HashMap::new();
     for (i, &j) in assignments.iter().enumerate() {
         matching.insert(i, j);
     }
+    let cost = (total_cost as f64) / SCALE_FACTOR;
 
-    matching
+    Matching::new(matching, cost)
 }
 
 /// Compute Fréchet energy of a barycenter
@@ -223,7 +238,7 @@ pub fn frechet_energy(
         .zip(weights.iter())
         .zip(matchings.iter())
         .for_each(|((atom, &weight), matching)| {
-            let dist_sq = compute_wasserstein_distance_squared(barycenter, atom, matching);
+            let dist_sq = matching.cost;
             energy += weight * dist_sq;
         });
     energy

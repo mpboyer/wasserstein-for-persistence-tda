@@ -190,7 +190,7 @@ mod tests {
 
         let (aug1, aug2) = augment_diagrams(&d1, &d2);
         let matching = compute_optimal_matching(&aug1, &aug2);
-        let dist_sq = compute_wasserstein_distance_squared(&aug1, &aug2, &matching);
+        let dist_sq = matching.cost();
 
         // Distance between identical diagrams should be 0
         assert!(dist_sq < 1e-6);
