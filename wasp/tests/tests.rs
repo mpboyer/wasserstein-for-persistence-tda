@@ -1,6 +1,7 @@
-use crate::structs::*;
+use wasp::structs::*;
+
 #[cfg(test)]
-mod thetests {
+mod persistence_pair {
     use super::*;
 
     // ===== Basic PersistencePair Tests =====
@@ -43,7 +44,11 @@ mod thetests {
         assert_eq!(b, 1.0);
         assert_eq!(d, 1.0);
     }
+}
 
+#[cfg(test)]
+mod persistence_diagrams {
+    use super::*;
     // ===== PersistenceDiagram Tests =====
 
     #[test]
@@ -129,7 +134,11 @@ mod thetests {
         assert_eq!(augmented[1].size(), 3);
         assert_eq!(augmented[2].size(), 3);
     }
+}
 
+#[cfg(test)]
+mod cost_and_matching_tests {
+    use super::*;
     // ===== Cost and Distance Tests =====
 
     #[test]
@@ -195,7 +204,11 @@ mod thetests {
         // Distance between identical diagrams should be 0
         assert!(dist_sq < 1e-6);
     }
+}
 
+#[cfg(test)]
+mod probability_utils {
+    use super::*;
     // ===== Simplex Projection Tests =====
 
     #[test]
@@ -281,7 +294,11 @@ mod thetests {
 
         arithmetic_mean(&points, &weights);
     }
+}
 
+#[cfg(test)]
+mod barycenter_computations {
+    use super::*;
     // ===== Integration Tests =====
 
     #[test]

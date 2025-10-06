@@ -24,7 +24,7 @@ pub fn arithmetic_mean(points: &[(f64, f64)], weights: &[f64]) -> (f64, f64) {
     (sum_b, sum_d)
 }
 
-/// Projection onto probability simplex in (dlog d) based on https://arxiv.org/pdf/1309.1541
+/// Projection onto probability simplex in (dlog d) based on <https://arxiv.org/pdf/1309.1541>
 pub fn project_onto_simplex(weights: &[f64]) -> Vec<f64> {
     let d = weights.len();
     if d == 0 {
@@ -208,6 +208,46 @@ pub fn compute_optimal_matching(
     let (assignment, cost) = auction.run(diagram1, diagram2);
 
     Matching::new(assignment, cost)
+}
+
+/// Compute optimal matching/transport map for assignment between two persistence diagrams
+pub fn compute_optimal_matching_hungarian(
+    diagram1: &PersistenceDiagram,
+    diagram2: &PersistenceDiagram,
+) -> Matching {
+    let n = diagram1.size();
+    assert_eq!(
+        n,
+        diagram2.size(),
+        "Diagrams must be augmented to the same size"
+    );
+
+    if n == 0 {
+        return Matching::new(HashMap::new(), 0.);
+    }
+
+    // Scale floats to integers for `pathfinding` crate
+    const SCALE_FACTOR: f64 = 1_000_000.0;
+
+    let mut costs = Vec::with_capacity(n * n);
+    (0..n).for_each(|i| {
+        (0..n).for_each(|j| {
+            let cost = wasserstein_cost(&diagram1.pairs()[i], &diagram2.pairs()[j]);
+            costs.push((cost * SCALE_FACTOR).round() as i64);
+        });
+    });
+
+    let cost_matrix = Matrix::from_vec(n, n, costs).unwrap();
+
+    let (total_cost, assignments) = kuhn_munkres_min(&cost_matrix);
+
+    let mut matching = HashMap::new();
+    for (i, &j) in assignments.iter().enumerate() {
+        matching.insert(i, j);
+    }
+    let cost = (total_cost as f64) / SCALE_FACTOR;
+
+    Matching::new(matching, cost)
 }
 
 /// Compute Fréchet energy of a barycenter

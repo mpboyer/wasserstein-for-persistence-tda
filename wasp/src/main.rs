@@ -1,12 +1,5 @@
-mod structs;
-use crate::structs::*;
+use wasp::structs::*;
 
-mod auction;
-pub use auction::AuctionAlgorithm;
 fn main() {
     println!("Hello World!");
 }
-
-mod benchmarks;
-#[cfg(test)]
-mod tests;
