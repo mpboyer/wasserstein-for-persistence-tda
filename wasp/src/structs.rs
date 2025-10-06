@@ -183,6 +183,10 @@ impl Matching {
 }
 
 /// Compute optimal matching/transport map for assignment between two persistence diagrams
+use crate::auction::AuctionAlgorithm;
+
+/// Compute optimal matching/transport map for assignment between two persistence diagrams
+/// using the Auction algorithm (more efficient than Munkres)
 pub fn compute_optimal_matching(
     diagram1: &PersistenceDiagram,
     diagram2: &PersistenceDiagram,
@@ -198,28 +202,12 @@ pub fn compute_optimal_matching(
         return Matching::new(HashMap::new(), 0.);
     }
 
-    // Scale floats to integers for `pathfinding` crate
-    const SCALE_FACTOR: f64 = 1_000_000.0;
+    // Use auction algorithm with default parameters
+    // gamma = 0.01 as suggested in the paper
+    let mut auction = AuctionAlgorithm::new(-1.0, 0.01); // -1.0 means auto-compute initial epsilon
+    let (assignment, cost) = auction.run(diagram1, diagram2);
 
-    let mut costs = Vec::with_capacity(n * n);
-    (0..n).for_each(|i| {
-        (0..n).for_each(|j| {
-            let cost = wasserstein_cost(&diagram1.pairs()[i], &diagram2.pairs()[j]);
-            costs.push((cost * SCALE_FACTOR).round() as i64);
-        });
-    });
-
-    let cost_matrix = Matrix::from_vec(n, n, costs).unwrap();
-
-    let (total_cost, assignments) = kuhn_munkres_min(&cost_matrix);
-
-    let mut matching = HashMap::new();
-    for (i, &j) in assignments.iter().enumerate() {
-        matching.insert(i, j);
-    }
-    let cost = (total_cost as f64) / SCALE_FACTOR;
-
-    Matching::new(matching, cost)
+    Matching::new(assignment, cost)
 }
 
 /// Compute Fréchet energy of a barycenter
