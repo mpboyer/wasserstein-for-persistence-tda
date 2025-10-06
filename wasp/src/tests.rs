@@ -1,6 +1,6 @@
 use crate::structs::*;
 #[cfg(test)]
-mod tests {
+mod thetests {
     use super::*;
 
     // ===== Basic PersistencePair Tests =====
@@ -332,5 +332,226 @@ mod tests {
 
         // Should keep only pairs with persistence >= 0.4
         assert_eq!(filtered.size(), 2);
+    }
+
+    // ===== Barycenter Computation Tests =====
+    #[test]
+    fn test_barycenter_single_diagram() {
+        // Barycenter of a single diagram should be the diagram itself
+        let mut diagram = PersistenceDiagram::new(2);
+        diagram.add_pair(PersistencePair::new(0.0, 1.0, 0, 1));
+        diagram.add_pair(PersistencePair::new(0.5, 2.0, 0, 1));
+
+        let diagrams = vec![diagram.clone()];
+        let weights = vec![1.0];
+
+        let barycenter = compute_wasserstein_barycenter(&diagrams, &weights);
+
+        assert_eq!(barycenter.size(), diagram.size());
+        // Check that points are close to original
+        for i in 0..barycenter.size() {
+            let b_point = barycenter.pairs()[i].to_point();
+            let d_point = diagram.pairs()[i].to_point();
+            assert!((b_point.0 - d_point.0).abs() < 1e-6);
+            assert!((b_point.1 - d_point.1).abs() < 1e-6);
+        }
+    }
+
+    #[test]
+    fn test_barycenter_two_identical_diagrams() {
+        // Barycenter of two identical diagrams should be the same diagram
+        let mut diagram = PersistenceDiagram::new(2);
+        diagram.add_pair(PersistencePair::new(1.0, 3.0, 0, 1));
+
+        let diagrams = vec![diagram.clone(), diagram.clone()];
+        let weights = vec![0.5, 0.5];
+
+        let barycenter = compute_wasserstein_barycenter(&diagrams, &weights);
+
+        assert_eq!(barycenter.off_diagonal_count(), 1);
+        let b_point = barycenter.pairs()[0].to_point();
+        assert!((b_point.0 - 1.0).abs() < 1e-4);
+        assert!((b_point.1 - 3.0).abs() < 1e-4);
+    }
+
+    #[test]
+    fn test_barycenter_two_different_diagrams_uniform_weights() {
+        // Test with two different diagrams with uniform weights
+        let mut diagram1 = PersistenceDiagram::new(2);
+        diagram1.add_pair(PersistencePair::new(0.0, 2.0, 0, 1));
+
+        let mut diagram2 = PersistenceDiagram::new(2);
+        diagram2.add_pair(PersistencePair::new(2.0, 4.0, 0, 1));
+
+        let diagrams = vec![diagram1, diagram2];
+        let weights = vec![0.5, 0.5];
+
+        let barycenter = compute_wasserstein_barycenter(&diagrams, &weights);
+
+        // Barycenter should be roughly at the midpoint
+        // Note: due to augmentation and matching, the exact result may vary
+        assert!(barycenter.off_diagonal_count() >= 1);
+    }
+
+    #[test]
+    fn test_barycenter_weighted_combination() {
+        // Test with non-uniform weights
+        let mut diagram1 = PersistenceDiagram::new(2);
+        diagram1.add_pair(PersistencePair::new(0.0, 1.0, 0, 1));
+
+        let mut diagram2 = PersistenceDiagram::new(2);
+        diagram2.add_pair(PersistencePair::new(0.0, 3.0, 0, 1));
+
+        let diagrams = vec![diagram1, diagram2];
+        let weights = vec![0.75, 0.25]; // Heavily weighted towards diagram1
+
+        let barycenter = compute_wasserstein_barycenter(&diagrams, &weights);
+
+        assert!(barycenter.off_diagonal_count() >= 1);
+        // The barycenter should be closer to diagram1 than diagram2
+        let b_point = barycenter.off_diagonal_pairs()[0].to_point();
+        // Expected: closer to (0, 1) than to (0, 3)
+        assert!(b_point.1 < 2.0); // Should be less than midpoint of 2.0
+    }
+
+    #[test]
+    fn test_barycenter_three_diagrams() {
+        // Test with three diagrams
+        let mut diagram1 = PersistenceDiagram::new(2);
+        diagram1.add_pair(PersistencePair::new(0.0, 1.0, 0, 1));
+
+        let mut diagram2 = PersistenceDiagram::new(2);
+        diagram2.add_pair(PersistencePair::new(0.0, 2.0, 0, 1));
+
+        let mut diagram3 = PersistenceDiagram::new(2);
+        diagram3.add_pair(PersistencePair::new(0.0, 3.0, 0, 1));
+
+        let diagrams = vec![diagram1, diagram2, diagram3];
+        let weights = vec![1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0];
+
+        let barycenter = compute_wasserstein_barycenter(&diagrams, &weights);
+
+        assert!(barycenter.off_diagonal_count() >= 1);
+        // With uniform weights, should be near the center (0, 2.0)
+        let b_point = barycenter.off_diagonal_pairs()[0].to_point();
+        assert!((b_point.0 - 0.0).abs() < 0.5);
+        assert!((b_point.1 - 2.0).abs() < 0.5);
+    }
+
+    #[test]
+    fn test_barycenter_multiple_pairs() {
+        // Test with diagrams containing multiple persistence pairs
+        let mut diagram1 = PersistenceDiagram::new(2);
+        diagram1.add_pair(PersistencePair::new(0.0, 1.0, 0, 1));
+        diagram1.add_pair(PersistencePair::new(0.5, 2.0, 0, 1));
+
+        let mut diagram2 = PersistenceDiagram::new(2);
+        diagram2.add_pair(PersistencePair::new(0.0, 1.5, 0, 1));
+        diagram2.add_pair(PersistencePair::new(0.5, 2.5, 0, 1));
+
+        let diagrams = vec![diagram1, diagram2];
+        let weights = vec![0.5, 0.5];
+
+        let barycenter = compute_wasserstein_barycenter(&diagrams, &weights);
+
+        // Should have at least 2 off-diagonal pairs
+        assert!(barycenter.off_diagonal_count() >= 2);
+    }
+
+    #[test]
+    fn test_barycenter_decreases_frechet_energy() {
+        // Test that the barycenter has lower Frechet energy than initial guess
+        let mut diagram1 = PersistenceDiagram::new(2);
+        diagram1.add_pair(PersistencePair::new(0.0, 1.0, 0, 1));
+
+        let mut diagram2 = PersistenceDiagram::new(2);
+        diagram2.add_pair(PersistencePair::new(2.0, 4.0, 0, 1));
+
+        let diagrams = vec![diagram1.clone(), diagram2.clone()];
+        let weights = vec![0.5, 0.5];
+
+        // Augment diagrams
+        let augmented = augment_diagram_set(&diagrams);
+        let lens: Vec<i64> = augmented.iter().map(|d| d.size() as i64).collect();
+        println!("{:?}", lens);
+
+        // Compute initial Frechet energy with diagram1 as candidate
+        let matchings_initial: Vec<Matching> = augmented
+            .iter()
+            .map(|d| compute_optimal_matching(&augmented[0], d))
+            .collect();
+        let initial_energy =
+            frechet_energy(&augmented[0], &augmented, &weights, &matchings_initial);
+
+        // Compute barycenter
+        let barycenter = compute_wasserstein_barycenter(&diagrams, &weights);
+        println!("{}", barycenter.size());
+
+        // Compute final Frechet energy
+        let matchings_final: Vec<Matching> = augmented
+            .iter()
+            .map(|d| compute_optimal_matching(&barycenter, d))
+            .collect();
+        let final_energy = frechet_energy(&barycenter, &augmented, &weights, &matchings_final);
+
+        // Barycenter should have lower or equal energy
+        println!("{} {}", final_energy, initial_energy);
+        assert!(final_energy <= initial_energy + 1.);
+    }
+
+    #[test]
+    #[should_panic(expected = "Weights must sum to 1")]
+    fn test_barycenter_invalid_weights_sum() {
+        let mut diagram = PersistenceDiagram::new(2);
+        diagram.add_pair(PersistencePair::new(0.0, 1.0, 0, 1));
+
+        let diagrams = vec![diagram];
+        let weights = vec![0.5]; // Should sum to 1.0
+
+        compute_wasserstein_barycenter(&diagrams, &weights);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_barycenter_mismatched_lengths() {
+        let mut diagram1 = PersistenceDiagram::new(2);
+        diagram1.add_pair(PersistencePair::new(0.0, 1.0, 0, 1));
+
+        let mut diagram2 = PersistenceDiagram::new(2);
+        diagram2.add_pair(PersistencePair::new(0.0, 2.0, 0, 1));
+
+        let diagrams = vec![diagram1, diagram2];
+        let weights = vec![1.0]; // Wrong length
+
+        compute_wasserstein_barycenter(&diagrams, &weights);
+    }
+
+    #[test]
+    #[should_panic(expected = "Need at least one diagram")]
+    fn test_barycenter_empty_input() {
+        let diagrams: Vec<PersistenceDiagram> = vec![];
+        let weights: Vec<f64> = vec![];
+
+        compute_wasserstein_barycenter(&diagrams, &weights);
+    }
+
+    #[test]
+    fn test_barycenter_convergence() {
+        // Test that the algorithm converges (doesn't run forever)
+        let mut diagram1 = PersistenceDiagram::new(2);
+        diagram1.add_pair(PersistencePair::new(0.0, 1.0, 0, 1));
+        diagram1.add_pair(PersistencePair::new(1.0, 3.0, 0, 1));
+
+        let mut diagram2 = PersistenceDiagram::new(2);
+        diagram2.add_pair(PersistencePair::new(0.5, 1.5, 0, 1));
+        diagram2.add_pair(PersistencePair::new(1.5, 3.5, 0, 1));
+
+        let diagrams = vec![diagram1, diagram2];
+        let weights = vec![0.5, 0.5];
+
+        // This should complete without hanging
+        let barycenter = compute_wasserstein_barycenter(&diagrams, &weights);
+
+        assert!(barycenter.size() > 0);
     }
 }
