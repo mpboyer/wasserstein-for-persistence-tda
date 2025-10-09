@@ -3,9 +3,9 @@ use std::time::Instant;
 use wasp::structs::{compute_optimal_matching, compute_optimal_matching_hungarian};
 use wasp::structs::{PersistenceDiagram, PersistencePair};
 
-static BENCHMARK_SIZE: usize = 1000;
+static BENCHMARK_SIZE: usize = 6942;
 
-/// Generate a synthetic persistence diagram of `n` points
+// Generate a synthetic persistence diagram of `n` points
 fn make_random_diagram(n_points: usize) -> PersistenceDiagram {
     use rand::Rng;
     let mut rng = rand::rng();
@@ -19,18 +19,13 @@ fn make_random_diagram(n_points: usize) -> PersistenceDiagram {
     PersistenceDiagram::from_pairs(pairs, 2)
 }
 
-fn benchmark_auction_algorithm() {
-    // Create two random persistence diagrams
-    let d1 = make_random_diagram(BENCHMARK_SIZE);
-    let d2 = make_random_diagram(BENCHMARK_SIZE);
-
-    // Benchmark run
+fn benchmark_auction_algorithm(d1: PersistenceDiagram, d2: PersistenceDiagram) {
     let start = Instant::now();
     let assignment = compute_optimal_matching(&d1, &d2);
     let duration = start.elapsed();
 
     println!(
-            "AuctionAlgorithm benchmark (n = {}):\n  Assignments = {}\n  Total cost = {:.6}\n  Time = {:?}",
+            "=============\nAuctionAlgorithm benchmark (n = {}):\n  Assignments = {}\n  Total cost = {:.6}\n  Time = {:?}\n\n",
             BENCHMARK_SIZE,
             assignment.len(),
             assignment.cost(),
@@ -41,18 +36,13 @@ fn benchmark_auction_algorithm() {
     assert_eq!(assignment.len(), BENCHMARK_SIZE);
 }
 
-fn benchmark_hungarian_algorithm() {
-    // Create two random persistence diagrams
-    let d1 = make_random_diagram(BENCHMARK_SIZE);
-    let d2 = make_random_diagram(BENCHMARK_SIZE);
-
-    // Benchmark run
+fn benchmark_hungarian_algorithm(d1: PersistenceDiagram, d2: PersistenceDiagram) {
     let start = Instant::now();
     let assignment = compute_optimal_matching_hungarian(&d1, &d2);
     let duration = start.elapsed();
 
     println!(
-            "HungarianAlgorithm benchmark (n = {}):\n  Assignments = {}\n  Total cost = {:.6}\n  Time = {:?}",
+            "=============\nHungarianAlgorithm benchmark (n = {}):\n  Assignments = {}\n  Total cost = {:.6}\n  Time = {:?}\n\n",
             BENCHMARK_SIZE,
             assignment.len(),
             assignment.cost(),
@@ -64,6 +54,10 @@ fn benchmark_hungarian_algorithm() {
 }
 
 fn main() {
-    benchmark_auction_algorithm();
-    benchmark_hungarian_algorithm();
+    let d1 = make_random_diagram(BENCHMARK_SIZE);
+    let d2 = make_random_diagram(BENCHMARK_SIZE);
+
+    // Benchmark runs
+    benchmark_auction_algorithm(d1.clone(), d2.clone());
+    benchmark_hungarian_algorithm(d1.clone(), d2.clone());
 }

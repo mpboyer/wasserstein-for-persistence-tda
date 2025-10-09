@@ -37,9 +37,9 @@ pub fn project_onto_simplex(weights: &[f64]) -> Vec<f64> {
     let mut theta = 0.0;
     let mut rho = 0;
 
-    for j in 0..d {
-        theta += sorted[j];
-        let candidate_theta = sorted[j] + (1.0 - theta) / (j + 1) as f64;
+    for (j, theta_j) in sorted.iter().enumerate() {
+        theta += theta_j;
+        let candidate_theta = theta_j + (1.0 - theta) / (j + 1) as f64;
 
         if candidate_theta > 0.0 {
             rho = j + 1;
@@ -180,6 +180,10 @@ impl Matching {
     pub fn len(&self) -> usize {
         self.assignments.len()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 }
 
 /// Compute optimal matching/transport map for assignment between two persistence diagrams
@@ -253,7 +257,7 @@ pub fn compute_optimal_matching_hungarian(
 
 /// Compute Fréchet energy of a barycenter
 pub fn frechet_energy(
-    barycenter: &PersistenceDiagram,
+    _barycenter: &PersistenceDiagram,
     atoms: &[PersistenceDiagram],
     weights: &[f64],
     matchings: &[Matching],
@@ -266,7 +270,7 @@ pub fn frechet_energy(
         .iter()
         .zip(weights.iter())
         .zip(matchings.iter())
-        .for_each(|((atom, &weight), matching)| {
+        .for_each(|((_atom, &weight), matching)| {
             let dist_sq = matching.cost;
             energy += weight * dist_sq;
         });
@@ -423,7 +427,7 @@ pub fn compute_wasserstein_barycenter(
     let max_iterations = 100;
     let mut prev_matchings: Vec<HashMap<usize, usize>> = vec![];
 
-    for iteration in 0..max_iterations {
+    for _iteration in 0..max_iterations {
         // Assignment step: compute optimal matching between barycenter and each diagram
         matchings.clear();
         for diagram in augmented.iter() {
@@ -447,7 +451,7 @@ pub fn compute_wasserstein_barycenter(
     barycenter
 }
 
-/// BENCHAMRK ONLY
+/// BENCHMARK ONLY
 pub fn compute_wasserstein_barycenter_no_progressive(
     diagrams: &[PersistenceDiagram],
     weights: &[f64],
@@ -472,7 +476,7 @@ pub fn compute_wasserstein_barycenter_no_progressive(
     let max_iterations = 100;
     let mut prev_matchings: Vec<HashMap<usize, usize>> = vec![];
 
-    for iteration in 0..max_iterations {
+    for _iteration in 0..max_iterations {
         // Assignment step: compute optimal matching between barycenter and each diagram
         matchings.clear();
         for diagram in augmented.iter() {
