@@ -3,7 +3,7 @@ use std::time::Instant;
 use wasp::structs::{compute_optimal_matching, compute_optimal_matching_hungarian};
 use wasp::structs::{PersistenceDiagram, PersistencePair};
 
-static BENCHMARK_SIZE: usize = 6942;
+static BENCHMARK_SIZE: usize = 10000;
 
 // Generate a synthetic persistence diagram of `n` points
 fn make_random_diagram(n_points: usize) -> PersistenceDiagram {
@@ -25,7 +25,7 @@ fn benchmark_auction_algorithm(d1: PersistenceDiagram, d2: PersistenceDiagram) {
     let duration = start.elapsed();
 
     println!(
-            "=============\nAuctionAlgorithm benchmark (n = {}):\n  Assignments = {}\n  Total cost = {:.6}\n  Time = {:?}\n\n",
+            "\n========================================\nAuctionAlgorithm benchmark (n = {}):\n  Assignments = {}\n  Total cost = {:.6}\n  Time = {:?}\n",
             BENCHMARK_SIZE,
             assignment.len(),
             assignment.cost(),
@@ -42,7 +42,7 @@ fn benchmark_hungarian_algorithm(d1: PersistenceDiagram, d2: PersistenceDiagram)
     let duration = start.elapsed();
 
     println!(
-            "=============\nHungarianAlgorithm benchmark (n = {}):\n  Assignments = {}\n  Total cost = {:.6}\n  Time = {:?}\n\n",
+            "\n========================================\nHungarianAlgorithm benchmark (n = {}):\n  Assignments = {}\n  Total cost = {:.6}\n  Time = {:?}\n",
             BENCHMARK_SIZE,
             assignment.len(),
             assignment.cost(),

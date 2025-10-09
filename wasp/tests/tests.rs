@@ -1,3 +1,4 @@
+use wasp::barycenter::*;
 use wasp::structs::*;
 
 #[cfg(test)]
