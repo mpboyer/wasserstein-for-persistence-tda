@@ -188,6 +188,7 @@ impl Matching {
 
 /// Compute optimal matching/transport map for assignment between two persistence diagrams
 use crate::auction::AuctionAlgorithm;
+use crate::old_auction::OldAuctionAlgorithm;
 
 /// Compute optimal matching/transport map for assignment between two persistence diagrams
 /// using the Auction algorithm (more efficient than Munkres)
@@ -209,6 +210,29 @@ pub fn compute_optimal_matching(
     // Use auction algorithm with default parameters
     // gamma = 0.01 as suggested in the paper
     let mut auction = AuctionAlgorithm::new(-1.0, 0.01); // -1.0 means auto-compute initial epsilon
+    let (assignment, cost) = auction.run(diagram1, diagram2);
+
+    Matching::new(assignment, cost)
+}
+
+pub fn compute_optimal_matching_old(
+    diagram1: &PersistenceDiagram,
+    diagram2: &PersistenceDiagram,
+) -> Matching {
+    let n = diagram1.size();
+    assert_eq!(
+        n,
+        diagram2.size(),
+        "Diagrams must be augmented to the same size"
+    );
+
+    if n == 0 {
+        return Matching::new(HashMap::new(), 0.);
+    }
+
+    // Use auction algorithm with default parameters
+    // gamma = 0.01 as suggested in the paper
+    let mut auction = OldAuctionAlgorithm::new(-1.0, 0.01); // -1.0 means auto-compute initial epsilon
     let (assignment, cost) = auction.run(diagram1, diagram2);
 
     Matching::new(assignment, cost)
